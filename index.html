@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two Player Color Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        .btn{
+        border-radius: 20px !important;
+        }
+
+        .play-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+        }
+
+        .question-area {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex: 0.5;
+            border-top: 2px solid black;
+            border-bottom: 2px solid black;
+            position: relative;
+        }
+
+        .color-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 150px;
+            height: 100px;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 10px 0;
+            border-radius: 20px;
+        }
+
+        .color-box.player2 {
+            transform: rotate(180deg);
+        }
+
+        .score {
+            position: absolute;
+            font-size: 18px;
+        }
+
+        .top-score {
+            top: 10px;
+        }
+
+        .bottom-score {
+            bottom: 10px;
+        }
+
+        .hidden {
+            visibility: hidden;
+        }
+
+        button {
+            margin: 0 20px;
+            width: 100px;
+            height: 100px;
+        }
+
+        #mode-display {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            z-index: 2;
+        }
+
+        .mode-container {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: none;
+        }
+
+        .active-mode {
+            display: block;
+        }
+        #mode3,#mode2,#mode1 {
+        background: linear-gradient(45deg, #00ff97, #006199);
+    	color: white;
+    	border-radius: 32px;
+    	padding: 10px 30px;
+        font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Player Area -->
+    <div class="play-area top-area position-relative">
+        <div class="score top-score">Score: <span id="top-score">0</span></div>
+        <button class="btn" id="top-left" onclick="handleAnswer('top', 'left')"></button>
+        <button class="btn" id="top-right" onclick="handleAnswer('top', 'right')"></button>
+    </div>
+
+    <!-- Question Area -->
+    <div class="question-area">
+        <div id="question-box-player1" class="color-box player1">TEXT</div> 
+        
+        <div class="color-box" style="height: 40px;">
+        <div id="mode1" class="mode-container active-mode">Color </div>
+        <div id="mode2" class="mode-container">Name</div>
+        <div id="mode3" class="mode-container">Background</div>
+        </div>
+        
+        <div id="question-box-player2" class="color-box player2">TEXT</div>
+    </div>
+
+    <!-- Bottom Player Area -->
+    <div class="play-area bottom-area position-relative">
+        <div class="score bottom-score">Score: <span id="bottom-score">0</span></div>
+        <button class="btn" id="bottom-left" onclick="handleAnswer('bottom', 'left')"></button>
+        <button class="btn" id="bottom-right" onclick="handleAnswer('bottom', 'right')"></button>
+    </div>
+
+    <script>
+        let scores = { top: 0, bottom: 0 };
+        const colors = ['black', 'green', 'blue', 'red', 'yellow', 'pink', 'orange', 'purple', 'gray', 'white', 'brown', 'beige'];
+        let questionCount = 0;
+        let currentMode = 1;
+        let correctAnswer = '';
+
+        function generateQuestion() {
+            const boxColor = colors[Math.floor(Math.random() * colors.length)];
+            let textColor;
+            do {
+                textColor = colors[Math.floor(Math.random() * colors.length)];
+            } while (textColor === boxColor);
+
+            const text = colors[Math.floor(Math.random() * colors.length)].toUpperCase();
+
+            const questionBoxPlayer1 = document.getElementById('question-box-player1');
+            const questionBoxPlayer2 = document.getElementById('question-box-player2');
+
+            [questionBoxPlayer1, questionBoxPlayer2].forEach(box => {
+                box.style.backgroundColor = boxColor;
+                box.style.color = textColor;
+                box.textContent = text;
+            });
+
+            // Determine the correct and incorrect answers based on the mode
+            switch (currentMode) {
+                case 1: // Mode#1: Correct answer = text color, Incorrect = text
+                    correctAnswer = textColor;
+                    break;
+                case 2: // Mode#2: Correct answer = text, Incorrect = text color
+                    correctAnswer = text;
+                    break;
+                case 3: // Mode#3: Correct answer = background color, Incorrect = text color
+                    correctAnswer = boxColor;
+                    break;
+            }
+
+            // Randomize the position of correct and incorrect answers
+            const isCorrectOnLeft = Math.random() < 0.5;
+
+            let topLeftColor, topRightColor, bottomLeftColor, bottomRightColor;
+
+            if (currentMode === 3) {
+                // Mode#3: Correct answer is background color, wrong answer is text color
+                topLeftColor = isCorrectOnLeft ? boxColor : textColor;
+                topRightColor = isCorrectOnLeft ? textColor : boxColor;
+                bottomLeftColor = topLeftColor;
+                bottomRightColor = topRightColor;
+            } else {
+                // Modes 1 and 2
+                topLeftColor = isCorrectOnLeft ? correctAnswer : (currentMode === 2 ? textColor : boxColor);
+                topRightColor = isCorrectOnLeft ? (currentMode === 2 ? textColor : boxColor) : correctAnswer;
+                bottomLeftColor = topLeftColor;
+                bottomRightColor = topRightColor;
+            }
+
+            // Assign colors to buttons
+            const buttons = [
+                { id: 'top-left', color: topLeftColor },
+                { id: 'top-right', color: topRightColor },
+                { id: 'bottom-left', color: bottomLeftColor },
+                { id: 'bottom-right', color: bottomRightColor }
+            ];
+
+            buttons.forEach(button => {
+                const btnElement = document.getElementById(button.id);
+                btnElement.style.backgroundColor = button.color;
+                btnElement.dataset.answer = button.color;
+            });
+
+            // Show buttons after delay
+            setTimeout(() => {
+                document.querySelectorAll('button').forEach(btn => btn.classList.remove('hidden'));
+            }, 100);
+
+            // Update question count
+            questionCount++;
+            if (questionCount >= 5) {
+                changeMode();
+                questionCount = 0; // Reset the question count after every 5 questions
+            }
+        }
+
+        function handleAnswer(player, position) {
+            const buttonId = `${player}-${position}`;
+            const button = document.getElementById(buttonId);
+
+            if (button.dataset.answer === correctAnswer) {
+                scores[player]++;
+                document.getElementById(`${player}-score`).textContent = scores[player];
+                document.querySelectorAll('button').forEach(btn => btn.classList.add('hidden'));
+                setTimeout(generateQuestion, 100);
+            }
+        }
+
+        function changeMode() {
+            currentMode = (currentMode % 3) + 1; // Cycle through 1, 2, 3
+
+            // Hide all modes
+            document.getElementById('mode1').classList.remove('active-mode');
+            document.getElementById('mode2').classList.remove('active-mode');
+            document.getElementById('mode3').classList.remove('active-mode');
+
+            // Show active mode
+            document.getElementById(`mode${currentMode}`).classList.add('active-mode');
+            document.getElementById('mode-display').textContent = `MODE#${currentMode}`;
+        }
+
+        // Start the game
+        generateQuestion();
+    </script>
+</body>
+</html>
