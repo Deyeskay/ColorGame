@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Color Confusion Challenge</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            user-select: none;
+        }
+        
+        #player1 {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 40%;
+            background: #f0f0f0;
+        }
+        
+        #center {
+            position: absolute;
+            top: 40%;
+            width: 100%;
+            height: 20%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            overflow: hidden;
+        }
+        
+        #player2 {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40%;
+            background: #f0f0f0;
+        }
+        
+        .question-box {
+            width: 200px;
+            height: 100px;
+            border: 3px solid black;
+            position: relative;
+            margin: 10px;
+            overflow: hidden;
+        }
+        
+        .question-text {
+            position: absolute;
+            width: 100%;
+            height: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .question-text.top {
+            top: 0;
+        }
+        
+        .question-text.bottom {
+            bottom: 0;
+            transform: rotate(180deg);
+        }
+        
+        .mode-display {
+            font-size: 20px;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 5px;
+            z-index: 1;
+        }
+        
+        .player-area {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 100%;
+        }
+        
+        .game-button {
+            width: 120px;
+            height: 60px;
+            border: 3px solid black;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+        
+        .game-button:active {
+            transform: scale(0.95);
+        }
+        
+        .color-button {
+            font-size: 0;
+        }
+        
+        .score {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="player1">
+        <div class="score" id="score1">Score: 0</div>
+        <div class="player-area">
+            <div class="game-button" id="p1b1"></div>
+            <div class="game-button" id="p1b2"></div>
+        </div>
+    </div>
+    
+    <div id="center">
+        <div class="question-box" id="questionBox">
+            <div class="question-text top"></div>
+            <div class="question-text bottom"></div>
+        </div>
+        <div class="mode-display" id="modeDisplay"></div>
+    </div>
+    
+    <div id="player2">
+        <div class="score" id="score2">Score: 0</div>
+        <div class="player-area">
+            <div class="game-button" id="p2b1"></div>
+            <div class="game-button" id="p2b2"></div>
+        </div>
+    </div>
+
+    <script>
+        const colors = {
+            'Red': 'rgb(255, 0, 0)',
+            'Green': 'rgb(0, 128, 0)',
+            'Blue': 'rgb(0, 0, 255)',
+            'Yellow': 'rgb(255, 255, 0)',
+            'Purple': 'rgb(128, 0, 128)',
+            'Orange': 'rgb(255, 165, 0)'
+        };
+
+        let currentMode = 'color';
+        let questionsSinceModeChange = 0;
+        let scores = [0, 0];
+        let currentQuestion = {};
+
+        function getRandomColor(exclude = []) {
+            const available = Object.keys(colors).filter(c => !exclude.includes(c));
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function generateQuestion() {
+            const boxColor = getRandomColor();
+            const text = getRandomColor([boxColor]);
+            const textColor = getRandomColor([boxColor, text]);
+            
+            currentQuestion = {
+                boxColor: boxColor,
+                text: text,
+                textColor: textColor
+            };
+        }
+
+        function setGameMode() {
+            const modes = ['color', 'name', 'background'];
+            currentMode = modes[Math.floor(Math.random() * modes.length)];
+            questionsSinceModeChange = 0;
+            document.getElementById('modeDisplay').textContent = `${currentMode.toUpperCase()} MODE`;
+            document.getElementById('modeDisplay').style.backgroundColor = 
+                currentMode === 'color' ? '#FF4444' :
+                currentMode === 'name' ? '#44FF44' : '#4444FF';
+        }
+
+        function updateDisplay() {
+            const questionBox = document.getElementById('questionBox');
+            questionBox.style.backgroundColor = colors[currentQuestion.boxColor];
+            
+            document.querySelectorAll('.question-text').forEach(el => {
+                el.textContent = currentQuestion.text;
+                el.style.color = colors[currentQuestion.textColor];
+            });
+        }
+
+        function updateButtons() {
+            const correctAnswerType = currentMode === 'color' ? 'textColor' :
+                                     currentMode === 'name' ? 'text' : 'boxColor';
+            
+            const wrongAnswerType = currentMode === 'color' ? 'text' :
+                                  currentMode === 'name' ? 'textColor' : 'textColor';
+
+            const correctValue = currentQuestion[correctAnswerType];
+            const wrongValue = currentQuestion[wrongAnswerType];
+
+            [1, 2].forEach(player => {
+                const buttons = [
+                    document.getElementById(`p${player}b1`), 
+                    document.getElementById(`p${player}b2`)
+                ];
+
+                // Randomize button positions
+                const answers = [correctValue, wrongValue];
+                if (Math.random() < 0.5) answers.reverse();
+
+                buttons.forEach((button, index) => {
+                    const isColor = typeof answers[index] === 'string' && answers[index] in colors;
+                    
+                    // Set display text
+                    button.textContent = answers[index];
+                    
+                    // Set visual appearance
+                    button.className = `game-button ${isColor ? 'color-button' : ''}`;
+                    button.style.backgroundColor = isColor ? colors[answers[index]] : 'white';
+                });
+            });
+        }
+
+        function handleAnswer(player, button) {
+            let expectedValue;
+            switch(currentMode) {
+                case 'color':
+                    expectedValue = currentQuestion.textColor;
+                    break;
+                case 'name':
+                    expectedValue = currentQuestion.text;
+                    break;
+                case 'background':
+                    expectedValue = currentQuestion.boxColor;
+                    break;
+            }
+
+            if (button.textContent === expectedValue) {
+                scores[player-1] += 10;
+                document.getElementById(`score${player}`).textContent = `Score: ${scores[player-1]}`;
+                questionsSinceModeChange++;
+                
+                if (questionsSinceModeChange >= Math.floor(Math.random() * 5) + 4) {
+                    setGameMode();
+                }
+                
+                generateQuestion();
+                updateDisplay();
+                updateButtons();
+            }
+        }
+
+        // Initialize game
+        setGameMode();
+        generateQuestion();
+        updateDisplay();
+        updateButtons();
+
+        // Event listeners
+        document.querySelectorAll('.game-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const player = this.parentElement.parentElement.id.replace('player', '')[0];
+                handleAnswer(player, this);
+            });
+        });
+    </script>
+</body>
+</html>
