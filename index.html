@@ -214,18 +214,26 @@
             transform: rotate(180deg) ;
         }
 
+        .wrong-answer {
+            background: #330000 !important;
+            transition: background 0.3s ease;
+        }
+
         .positive-feedback {
             color:green;
         }
         .negative-feedback {
             color:red;
         }
+        #player1 .score-feedback {
+            transform: rotate(180deg) ;
+        }
     </style>
 </head>
 <body>
     <!-- Add sound elements -->
-    <audio id="correctSound" src="correct.mp3"></audio>
-    <audio id="wrongSound" src="wrong.mp3"></audio>
+    <audio id="correctSound" src="https://deyeskay.github.io/ColorGame/correct.mp3"></audio>
+    <audio id="wrongSound" src="https://deyeskay.github.io/ColorGame/wrong.mp3"></audio>
 
     <div id="difficultyScreen">
         <h1>Color Confusion Challenge</h1>
