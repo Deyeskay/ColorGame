@@ -121,6 +121,7 @@
             justify-content: space-around;
             align-items: center;
             height: 100%;
+            position: relative;
         }
         
         .game-button {
@@ -145,7 +146,7 @@
         .game-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            pointer-events: none; /* Disable clicks */
+            pointer-events: none;
         }
         
         .color-button {
@@ -156,7 +157,16 @@
             position: absolute;
             font-size: 24px;
             font-weight: bold;
-            padding: 10px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        #score1 {
+            top: 20px;
+        }
+        
+        #score2 {
+            bottom: 20px;
         }
         
         #timer {
@@ -170,11 +180,52 @@
             padding: 10px 30px;
             border-radius: 10px;
             display: none;
-            z-index: 1000; /* Ensure visibility */
+            z-index: 1000;
+        }
+
+        /* Score Change Animation */
+        @keyframes score-change {
+            0% { opacity: 1; transform: translateY(0) translateX(-50%); }
+            100% { opacity: 0; transform: translateY(-40px) translateX(-50%); }
+        }
+        
+        .score-feedback {
+            position: absolute;
+            font-size: 48px;
+            font-weight: bold;
+            animation: score-change 0.8s forwards;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        
+        #player1 .score-feedback {
+            top: 50%;
+        }
+        
+        #player2 .score-feedback {
+            bottom: 50%;
+        }
+
+        /* Rotate Player 2's score and animations */
+        #player1 .score,
+        #player1 .score-feedback {
+            transform: rotate(180deg) ;
+        }
+
+        .positive-feedback {
+            color:green;
+        }
+        .negative-feedback {
+            color:red;
         }
     </style>
 </head>
 <body>
+    <!-- Add sound elements -->
+    <audio id="correctSound" src="correct.mp3"></audio>
+    <audio id="wrongSound" src="wrong.mp3"></audio>
+
     <div id="difficultyScreen">
         <h1>Color Confusion Challenge</h1>
         <button class="mode-button" onclick="startGame('endless')">Endless Mode</button>
@@ -194,11 +245,12 @@
         </div>
         
         <div id="center">
+            <div class="mode-display mode-display-top" id="modeDisplayTop"></div>
             <div class="question-box" id="questionBox">
                 <div class="question-text top"></div>
                 <div class="question-text bottom"></div>
             </div>
-            <div class="mode-display" id="modeDisplay"></div>
+            <div class="mode-display mode-display-bottom" id="modeDisplayBottom"></div>
         </div>
         
         <div id="player2">
@@ -219,6 +271,9 @@
             'Purple': 'rgb(128, 0, 128)',
             'Orange': 'rgb(255, 165, 0)'
         };
+
+        const correctSound = document.getElementById('correctSound');
+        const wrongSound = document.getElementById('wrongSound');
 
         let currentMode = 'color';
         let gameMode = 'endless';
@@ -249,11 +304,15 @@
             const modes = ['color', 'name', 'background'];
             currentMode = modes[Math.floor(Math.random() * modes.length)];
             questionsSinceModeChange = 0;
-            const modeDisplay = document.getElementById('modeDisplay');
-            modeDisplay.textContent = `${currentMode.toUpperCase()} MODE`;
-            modeDisplay.style.backgroundColor = 
-                currentMode === 'color' ? '#FF4444' :
-                currentMode === 'name' ? '#44FF44' : '#4444FF';
+            
+            const modeColor = currentMode === 'color' ? '#FF4444' :
+                            currentMode === 'name' ? '#44FF44' : '#4444FF';
+            
+            document.getElementById('modeDisplayTop').textContent = `${currentMode.toUpperCase()} MODE`;
+            document.getElementById('modeDisplayTop').style.backgroundColor = modeColor;
+            
+            document.getElementById('modeDisplayBottom').textContent = `${currentMode.toUpperCase()} MODE`;
+            document.getElementById('modeDisplayBottom').style.backgroundColor = modeColor;
         }
 
         function updateDisplay() {
@@ -285,6 +344,10 @@
         }
 
         function prepareNextQuestion() {
+            // Reset wrong answer background
+            document.getElementById('player1').classList.remove('wrong-answer');
+            document.getElementById('player2').classList.remove('wrong-answer');
+            
             questionsSinceModeChange++;
             
             if (questionsSinceModeChange >= Math.floor(Math.random() * 5) + 4) {
@@ -302,34 +365,58 @@
 
         function handleAnswer(player, button) {
             const isCorrect = button.dataset.correct === "true";
-            const oppositePlayer = player === 1 ? 2 : 1;
+            const playerArea = document.getElementById(`player${player}`);
+            const scoreElement = document.getElementById(`score${player}`);
+
+            // Play sound
+            if (isCorrect) {
+                correctSound.currentTime = 0;
+                correctSound.play();
+            } else {
+                wrongSound.currentTime = 0;
+                wrongSound.play();
+            }
+
+            // Show feedback animation
+            const feedback = document.createElement('div');
+            feedback.className = `score-feedback ${isCorrect ? 'positive-feedback' : 'negative-feedback'}`;
+            feedback.textContent = isCorrect ? '+10' : '-5';
+            playerArea.appendChild(feedback);
+
+            // Remove feedback element after animation
+            setTimeout(() => feedback.remove(), 800);
+
+            // Handle wrong answer background
+            if (!isCorrect) {
+                playerArea.classList.add('wrong-answer');
+            }
+
+            // Score handling
+            if (isCorrect) {
+                scores[player - 1] += 10;
+            } else if (gameMode === 'score') {
+                scores[player - 1] = Math.max(0, scores[player - 1] - 5);
+            }
+
+            // Update score display
+            scoreElement.textContent = `Score: ${scores[player - 1]}`;
 
             // Disable current player's buttons immediately
             disableButtonsForPlayer(player);
 
             if (isCorrect) {
                 // Correct answer flow
-                disableButtonsForPlayer(oppositePlayer);
-                scores[player-1] += 10;
-                document.getElementById(`score${player}`).textContent = `Score: ${scores[player-1]}`;
+                disableButtonsForPlayer(player === 1 ? 2 : 1);
                 setTimeout(prepareNextQuestion, 250);
             } else {
                 // Wrong answer flow
-                if(gameMode === 'score') {
-                    scores[player-1] = Math.max(0, scores[player-1] - 5);
-                    document.getElementById(`score${player}`).textContent = `Score: ${scores[player-1]}`;
-                }
-
-                // Reset opposite player's buttons first
+                const oppositePlayer = player === 1 ? 2 : 1;
                 const oppositeButtons = [
                     document.getElementById(`p${oppositePlayer}b1`),
                     document.getElementById(`p${oppositePlayer}b2`)
                 ];
                 oppositeButtons.forEach(btn => btn.disabled = false);
-                
                 disableWrongAnswerForPlayer(oppositePlayer);
-                
-                // Force enable correct answer
                 oppositeButtons.forEach(btn => {
                     if (btn.dataset.correct === "true") btn.disabled = false;
                 });
